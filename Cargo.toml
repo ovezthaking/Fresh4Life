@@ -1,0 +1,9 @@
+[package]
+name = "Fresh4Life"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rocket = "0.5.0"
+tera = "1.19.1"
+serde = { version = "1.0", features = ["derive"] }
