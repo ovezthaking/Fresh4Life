@@ -21,7 +21,7 @@ fn index(tera: &State<Tera>) -> RawHtml<String> {
     
     // Sample data
     let user = User {
-        name: "John Doe".to_string(),
+        name: "John Poe".to_string(),
         age: 30,
     };
     
@@ -46,7 +46,7 @@ fn user(tera: &State<Tera>, id: i32) -> RawHtml<String> {
     context.insert("title", "User Profile");
     
     let rendered = tera.render("user.html", &context)
-        .unwrap_or_else(|e| "Error rendering template".to_string());
+        .unwrap_or_else(|_e| "Error rendering template".to_string());
     
     RawHtml(rendered)
 }
@@ -76,7 +76,7 @@ fn rocket() -> Rocket<Build> {
         .manage(tera) // Add Tera to Rocket's managed state
         .mount("/", routes![index, about])
         .mount("/static", FileServer::from("static"))
-        .mount("/user", routes![user]) // Mount user route)
+        .mount("/user/1", routes![user]) // Mount user route)
 }
 
 #[rocket::main]
