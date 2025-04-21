@@ -139,7 +139,13 @@ fn rocket() -> Rocket<Build> {
         rocket::build()
         .attach(MyDatabase::init()) // Inicjalizacja bazy danych
         .manage(tera) // Dodanie Tera do stanu zarządzanego
-        .mount("/", routes![about, user, register, register_form])
+        .mount("/", routes![
+            index,
+            about,
+            user,
+            register_form,
+            register
+            ])
         .mount("/static", FileServer::from("static"))
 }
 
