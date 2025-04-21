@@ -35,6 +35,8 @@ diesel::table! {
         #[max_length = 255]
         title -> Varchar,
         #[max_length = 255]
+        genre -> Varchar,
+        #[max_length = 255]
         file_path -> Varchar,
         created_at -> Timestamp,
     }
