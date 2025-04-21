@@ -7,7 +7,7 @@ use rocket::{Rocket, Build, State};
 use rocket::fs::FileServer;
 use rocket::response::content::RawHtml;
 use tera::{Tera, Context};
-use serde::Serialize;
+//use serde::Serialize;
 use rocket::get;
 use rocket::routes;
 use rocket::post;
@@ -17,40 +17,55 @@ use rocket::http::Status;
 use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
 use rocket_sync_db_pools::database;
-use models::{User, NewUser};
-use crate::schema::users;
+use models::NewUser;
+//use crate::schema::users;
 use rocket_db_pools::{sqlx, Connection, Database};
+use dotenv::dotenv;
+use diesel::r2d2::ConnectionManager;
 
 #[derive(Database)]
 #[database("mysql_db")]
-struct MyDatabase(sqlx::MySqlPool);
+struct MyDatabaseSqlx(sqlx::MySqlPool);
 
-
-
+type DbPool = diesel::r2d2::Pool<ConnectionManager<MysqlConnection>>;
 
 // Index route that renders a template
 #[get("/")]
-fn index(tera: &State<Tera>) -> RawHtml<String> {
+async fn index(pool: &State<DbPool>, tera: &State<Tera>) -> RawHtml<String> {
+    use schema::users::dsl::*;
+
     let mut context = Context::new();
-    
-    // Sample data
-    let user = User {
-        id: 1,
-        username: "John Poe".to_string(),
-        password: "30".to_string(),
-        created_at: chrono::NaiveDateTime::from_timestamp(0, 0),
-    };
-    
-    context.insert("user", &user);
+
+    // Get a connection from the pool
+    let mut conn = pool.get().expect("Failed to get DB connection");
+
+    // Retrieve the first user from the database
+    let user_result = users
+        .first::<models::User>(&mut conn)
+        .optional();
+
+    match user_result {
+        Ok(Some(user)) => {
+            context.insert("user", &user);
+        }
+        Ok(None) => {
+            context.insert("error", "No users found");
+        }
+        Err(e) => {
+            println!("Database error: {}", e);
+            context.insert("error", "Error fetching user");
+        }
+    }
+
     context.insert("title", "Welcome");
-    
+
     // Render the template
     let rendered = tera.render("index.html", &context)
         .unwrap_or_else(|e| {
             println!("Template error: {}", e);
             "Error rendering template".to_string()
         });
-    
+
     RawHtml(rendered)
 }
 
@@ -92,7 +107,7 @@ struct RegisterForm {
 
 
 #[post("/register", data = "<form>")]
-async fn register(mut db: Connection<MyDatabase>, form: Form<RegisterForm>) -> Result<Redirect, Status> {
+async fn register(mut db: Connection<MyDatabaseSqlx>, form: Form<RegisterForm>) -> Result<Redirect, Status> {
     let hashed_password = hash(&form.password, DEFAULT_COST).map_err(|_| Status::InternalServerError)?;
 
     let new_user = NewUser {
@@ -136,9 +151,17 @@ fn rocket() -> Rocket<Build> {
     let tera = Tera::new("templates/**/*")
         .expect("Failed to initialize Tera templates");
     
+    let database_url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set in .env file");
+    let manager = ConnectionManager::<MysqlConnection>::new(database_url);
+    let pool = diesel::r2d2::Pool::builder()
+        .build(manager)
+        .expect("Failed to create DB pool");
+
         rocket::build()
-        .attach(MyDatabase::init()) // Inicjalizacja bazy danych
+        .attach(MyDatabaseSqlx::init())
         .manage(tera) // Dodanie Tera do stanu zarządzanego
+        .manage(pool)
         .mount("/", routes![
             index,
             about,
@@ -151,6 +174,7 @@ fn rocket() -> Rocket<Build> {
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
+    dotenv().ok();
     rocket().launch().await?;
     Ok(())
 }
