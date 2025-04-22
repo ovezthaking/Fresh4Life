@@ -71,6 +71,7 @@ async fn index(pool: &State<DbPool>, tera: &State<Tera>, cookies: &CookieJar<'_>
             id: 0,
             username: "You are not logged in".to_string(),
             password: "testpassword".to_string(),
+            #[allow(deprecated)]
             created_at: chrono::NaiveDateTime::from_timestamp(0, 0),
         };
         context.insert("user", &testuser);
