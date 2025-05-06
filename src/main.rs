@@ -1,6 +1,7 @@
 mod models;
 mod schema;
 
+
 use models::NewUser;
 //use crate::schema::users;
 use rocket::response::Redirect;
@@ -15,6 +16,11 @@ use rocket::form::Form;
 use rocket::http::Status;
 use rocket::http::CookieJar;
 use rocket::http::Cookie;
+use rocket::fs::TempFile;
+
+use rocket_multipart_form_data::{MultipartFormData, MultipartFormDataField};
+
+use std::path::Path;
 
 use tera::{Tera, Context};
 //use serde::Serialize;
@@ -104,15 +110,18 @@ async fn index(pool: &State<DbPool>, tera: &State<Tera>, cookies: &CookieJar<'_>
 
 
 #[get("/user/<id>")]
-fn user(tera: &State<Tera>, id: i32) -> RawHtml<String> {
+fn user(tera: &State<Tera>, id: i32) -> Result<RawHtml<String>, Status> {
     let mut context = Context::new();
     context.insert("id", &id);
     context.insert("title", "User Profile");
     
-    let rendered = tera.render("user.html", &context)
-        .unwrap_or_else(|_e| "Error rendering template".to_string());
-    
-    RawHtml(rendered)
+    match tera.render("user.html", &context) {
+        Ok(rendered) => Ok(RawHtml(rendered)),
+        Err(e) => {
+            println!("Template error: {}", e);
+            Err(Status::InternalServerError)
+        }
+    }
 }
 
 // About route with a different template
@@ -259,6 +268,71 @@ fn logout(cookies: &CookieJar<'_>) -> Redirect{
 
 
 
+#[derive(FromForm)]
+struct UploadForm<'r> {
+    title: String,
+    genre: String,
+    file: TempFile<'r>,
+}
+
+#[post("/upload", data = "<form>")]
+async fn upload(
+    form: Form<UploadForm<'_>>,
+    pool: &State<DbPool>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Status> {
+    let user_id: i32 = cookies
+        .get("user_id")
+        .ok_or(Status::Unauthorized)?
+        .value()
+        .parse()
+        .map_err(|_| Status::Unauthorized)?;
+
+    let mut upload = form.into_inner();
+
+    let file_name = format!("uploads/{}_{}", user_id, upload.file.name().unwrap_or("unnamed"));
+    let file_path = Path::new(&file_name);
+
+    // Ensure the uploads directory exists
+    std::fs::create_dir_all("uploads").map_err(|_| Status::InternalServerError)?;
+
+    // Persist the uploaded file
+    upload
+        .file
+        .persist_to(file_path)
+        .await
+        .map_err(|_| Status::InternalServerError)?;
+
+    let new_track = models::NewTrack {
+        user_id,
+        title: upload.title,
+        genre: upload.genre,
+        file_path: file_name,
+    };
+
+    // Assuming you have a function to insert `new_track` into the database
+    diesel::insert_into(schema::tracks::table)
+        .values(&new_track)
+        .execute(&mut pool.get().expect("Failed to get DB connection"))
+        .map_err(|_| Status::InternalServerError)?;
+
+    Ok(Redirect::to("/"))
+}
+
+
+#[get("/upload")]
+fn upload_form(tera: &State<Tera>) -> RawHtml<String> {
+    let mut context = Context::new();
+    context.insert("title", "Upload track");
+
+    let rendered = tera.render("upload.html", &context)
+        .unwrap_or_else(|e| {
+            println!("Template error: {}", e);
+            "Error rendering template".to_string()
+        });
+
+    RawHtml(rendered)
+}
 
 
 // Main function to set up the Rocket instance
@@ -289,6 +363,8 @@ fn rocket() -> Rocket<Build> {
             login_form,
             login,
             logout,
+            upload,
+            upload_form,
             ])
         .mount("/static", FileServer::from("static"))
 }

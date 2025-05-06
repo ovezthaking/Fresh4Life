@@ -11,6 +11,7 @@ dependencies = [
  "diesel",
  "dotenv",
  "rocket",
+ "rocket-multipart-form-data",
  "serde",
  "tera",
 ]
@@ -1168,6 +1169,24 @@ dependencies = [
 
 [[package]]
 name = "multer"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01acbdc23469fd8fe07ab135923371d5f5a422fbf9c522158677c8eb15bc51c2"
+dependencies = [
+ "bytes",
+ "encoding_rs",
+ "futures-util",
+ "http 0.2.12",
+ "httparse",
+ "log",
+ "memchr",
+ "mime",
+ "spin",
+ "version_check",
+]
+
+[[package]]
+name = "multer"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83e87776546dc87511aa5ee218730c92b666d7264ab6ed41f9d215af9cd5224b"
@@ -1597,7 +1616,7 @@ dependencies = [
  "indexmap",
  "log",
  "memchr",
- "multer",
+ "multer 3.1.0",
  "num_cpus",
  "parking_lot",
  "pin-project-lite",
@@ -1615,6 +1634,18 @@ dependencies = [
  "ubyte",
  "version_check",
  "yansi",
+]
+
+[[package]]
+name = "rocket-multipart-form-data"
+version = "0.10.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3c3cd05b4ff598b9490fbdfc8edcfdbab0ff3f546c0f58d5d3a7127addbc789"
+dependencies = [
+ "mime",
+ "multer 2.1.0",
+ "rocket",
+ "tokio-util",
 ]
 
 [[package]]

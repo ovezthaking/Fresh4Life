@@ -4,16 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/style.css">
-    <title>Upload Track</title>
+    <title>{{title}}</title>
 </head>
 <body>
     <h1>Upload Track</h1>
     <form action="/upload" method="post" enctype="multipart/form-data">
         <input type="text" name="title" placeholder="Track Title" required>
-        <input type="radio" name="genre" placeholder="Genre" >
+        <label for="genre">Choose a genre:</label>
+        <select name="genre" id="genre">
+            <option value="rock">Rock</option>
+            <option value="pop">Pop</option>
+            <option value="jazz">Jazz</option>
+            <option value="classical">Classical</option>
+            <option value="other">Other</option>
+        </select>
+        <br>
         <input type="file" name="file" accept=".mp3" required>
-        <button type="submit"></button>
+        <button type="submit">upload</button>
     </form>
+    <br>
     <a href="/">Come back Home</a>
 </body>
 </html>

@@ -11,6 +11,7 @@ diesel = { version = "2.2.9", features = ["mysql", "r2d2", "chrono"] }
 chrono = { version = "0.4.40", features = ["serde"] }
 bcrypt = "0.15.0"
 dotenv = "0.15.0"
+rocket-multipart-form-data = "0.10.7"
 
 
 [default.databases.mysql_db]
