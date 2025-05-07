@@ -37,6 +37,8 @@ The app includes the following features:
 │   ├── user.html           # User profile page template
 │   ├── register.html       # Registration form template
 │   ├── login.html          # Login form template
+│   ├── tracks.html         # Track list template
+│   ├── upload.html         # Upload form template
 ├── static
 │   ├── css
 │   ├── js
@@ -109,6 +111,9 @@ The app includes the following features:
 | GET    | `/login`          | Renders the login form               |
 | POST   | `/login`          | Authenticates user and sets cookie   |
 | GET    | `/logout`         | Clears session cookie and redirects  |
+| GET    | `/upload`         | Renders the upload track form        |
+| POST   | `/upload`         | Processes track upload form          |
+| GET    | `/tracks`         | Displays a list of all uploaded tracks |
 
 ## Database Schema
 The application uses a single `users` table with the following schema:
