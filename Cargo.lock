@@ -10,6 +10,7 @@ dependencies = [
  "chrono",
  "diesel",
  "dotenv",
+ "log",
  "rocket",
  "rocket-multipart-form-data",
  "serde",

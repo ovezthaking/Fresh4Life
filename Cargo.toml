@@ -12,6 +12,7 @@ chrono = { version = "0.4.40", features = ["serde"] }
 bcrypt = "0.15.0"
 dotenv = "0.15.0"
 rocket-multipart-form-data = "0.10.7"
+log = "0.4"
 
 
 [default.databases.mysql_db]

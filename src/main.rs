@@ -17,8 +17,12 @@ use rocket::http::Status;
 use rocket::http::CookieJar;
 use rocket::http::Cookie;
 use rocket::fs::TempFile;
+use rocket::config::{Config};
+use rocket::data::{Limits, ByteUnit};
 
 use rocket_multipart_form_data::{MultipartFormData, MultipartFormDataField};
+
+use log::error;
 
 use std::path::Path;
 
@@ -31,6 +35,9 @@ use dotenv::dotenv;
 use diesel::r2d2::ConnectionManager;
 
 use bcrypt::{hash, DEFAULT_COST, verify};
+
+use std::fs::File;
+use std::io::copy;
 
 /* 
 #[derive(Database)]
@@ -281,27 +288,52 @@ async fn upload(
     pool: &State<DbPool>,
     cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Status> {
+    // Pobierz user_id z ciasteczka
     let user_id: i32 = cookies
         .get("user_id")
         .ok_or(Status::Unauthorized)?
         .value()
         .parse()
-        .map_err(|_| Status::Unauthorized)?;
+        .map_err(|e| {
+            error!("Błąd parsowania user_id: {:?}", e);
+            Status::Unauthorized
+        })?;
 
     let mut upload = form.into_inner();
-
-    let file_name = format!("uploads/{}_{}", user_id, upload.file.name().unwrap_or("unnamed"));
+    // Zachowaj oryginalne rozszerzenie pliku
+    let original_file_name = upload.file.name().unwrap_or("unnamed");
+    let extension = Path::new(original_file_name)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("mp3");
+    let file_name = format!("uploads/{}_{}.{}", user_id, original_file_name, extension);
     let file_path = Path::new(&file_name);
 
-    // Ensure the uploads directory exists
-    std::fs::create_dir_all("uploads").map_err(|_| Status::InternalServerError)?;
+    // Utwórz folder uploads, jeśli nie istnieje
+    std::fs::create_dir_all("uploads").map_err(|e| {
+        error!("Błąd tworzenia folderu uploads: {:?}", e);
+        Status::InternalServerError
+    })?;
 
-    // Persist the uploaded file
-    upload
-        .file
-        .persist_to(file_path)
-        .await
-        .map_err(|_| Status::InternalServerError)?;
+    // Otwórz plik tymczasowy i docelowy, aby skopiować zawartość
+    let mut source_file = File::open(upload.file.path().ok_or_else(|| {
+        error!("Brak ścieżki do pliku tymczasowego");
+        Status::InternalServerError
+    })?).map_err(|e| {
+        error!("Błąd otwierania pliku tymczasowego: {:?}", e);
+        Status::InternalServerError
+    })?;
+
+    let mut dest_file = File::create(file_path).map_err(|e| {
+        error!("Błąd tworzenia pliku docelowego: {:?}", e);
+        Status::InternalServerError
+    })?;
+
+    // Skopiuj zawartość pliku
+    copy(&mut source_file, &mut dest_file).map_err(|e| {
+        error!("Błąd kopiowania pliku: {:?}", e);
+        Status::InternalServerError
+    })?;
 
     let new_track = models::NewTrack {
         user_id,
@@ -310,11 +342,18 @@ async fn upload(
         file_path: file_name,
     };
 
-    // Assuming you have a function to insert `new_track` into the database
+    // Wstaw do bazy danych
+    let mut conn = pool.get().map_err(|e| {
+        error!("Błąd połączenia z bazą danych: {:?}", e);
+        Status::InternalServerError
+    })?;
     diesel::insert_into(schema::tracks::table)
         .values(&new_track)
-        .execute(&mut pool.get().expect("Failed to get DB connection"))
-        .map_err(|_| Status::InternalServerError)?;
+        .execute(&mut conn)
+        .map_err(|e| {
+            error!("Błąd zapisu do bazy danych: {:?}", e);
+            Status::InternalServerError
+        })?;
 
     Ok(Redirect::to("/"))
 }
@@ -335,6 +374,34 @@ fn upload_form(tera: &State<Tera>) -> RawHtml<String> {
 }
 
 
+#[get("/tracks")]
+async fn tracks(tera: &State<Tera>, pool: &State<DbPool>) -> Result<RawHtml<String>, Status> {
+    let mut conn = pool.get().map_err(|e| {
+        error!("Błąd połączenia z bazą danych: {:?}", e);
+        Status::InternalServerError
+    })?;
+
+    let tracks_result = schema::tracks::table
+        .load::<models::Track>(&mut conn)
+        .map_err(|e| {
+            error!("Błąd wczytywania utworów: {:?}", e);
+            Status::InternalServerError
+        })?;
+
+    let mut context = Context::new();
+    context.insert("title", "All Tracks");
+    context.insert("tracks", &tracks_result);
+
+    let rendered = tera
+        .render("tracks.html", &context)
+        .map_err(|e| {
+            error!("Błąd renderowania szablonu: {:?}", e);
+            Status::InternalServerError
+        })?;
+
+    Ok(RawHtml(rendered))
+}
+
 // Main function to set up the Rocket instance
 // and configure the routes
 
@@ -354,6 +421,7 @@ fn rocket() -> Rocket<Build> {
         rocket::build()
         .manage(tera) // Dodanie Tera do stanu zarządzanego
         .manage(pool)
+        .mount("/uploads", FileServer::from("uploads"))
         .mount("/", routes![
             index,
             about,
@@ -365,12 +433,22 @@ fn rocket() -> Rocket<Build> {
             logout,
             upload,
             upload_form,
+            tracks
             ])
         .mount("/static", FileServer::from("static"))
 }
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
+    let config = Config {
+        limits: Limits::default()
+            .limit("form", ByteUnit::Megabyte(100)) // 100 MB w bajtach
+            .limit("data-stream", ByteUnit::Megabyte(100))
+            .limit("file", ByteUnit::Megabyte(100)), // 100 MB w bajtach
+        ..Config::default()
+    };
+    
+
     dotenv().ok();
     rocket().launch().await?;
     Ok(())
