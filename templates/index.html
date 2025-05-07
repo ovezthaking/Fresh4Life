@@ -14,5 +14,20 @@
     <a href="/login">Login</a>
     <a href="/upload">Upload your track</a>
     <a href="/logout">{{ logout }}</a>
+    <br>
+    
+    
+    <ul>
+        {% for track in tracks %}
+        <li>
+            <a href="/tracks/{{ track.id }}">{{ track.title }}</a>
+            <audio controls>
+                <source src="/{{ track.file_path }}" type="audio/mpeg">
+            </audio>
+        </li>
+        <br><br>
+        {% endfor %}
+    </ul>
+    
 </body>
 </html>

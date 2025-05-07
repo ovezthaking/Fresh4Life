@@ -1,8 +1,105 @@
 body {
-    font-family: Arial, sans-serif;
-    margin: 40px;
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f9f9f9;
+    color: #333;
+    line-height: 1.6;
 }
 
-h1 {
-    color: #333;
+h1, h2, h3, h4, h5, h6 {
+    color: #222;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+a {
+    color: #007BFF;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    margin-bottom: 15px;
+}
+
+form {
+    max-width: 400px;
+    margin: 20px auto;
+    padding: 20px;
+    padding-right: 40px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+form input, form select, form button {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+form button {
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+form button:hover {
+    background-color: #0056b3;
+}
+
+audio {
+    display: block;
+    margin: 10px 0;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header, footer {
+    background: #007BFF;
+    color: #fff;
+    text-align: center;
+    padding: 10px 0;
+}
+
+footer {
+    margin-top: 20px;
+}
+
+button, input[type="submit"] {
+    cursor: pointer;
+}
+
+button:hover, input[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+.error {
+    color: red;
+    font-size: 14px;
+    text-align: center;
+}
+
+.success {
+    color: green;
+    font-size: 14px;
+    text-align: center;
 }

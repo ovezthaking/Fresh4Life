@@ -9,3 +9,12 @@ mysql_db = { url = "mysql://root:@localhost/fresh4life" }
 form = "100 MiB"
 file = "100 MiB"
 data-stream = "100 MiB"
+"file/mp3" = "100 MiB"
+"file/wav" = "200 MiB"
+
+[default.limits]
+form = "100 MiB"
+file = "100 MiB"
+data-stream = "100 MiB"
+"file/mp3" = "100 MiB"
+"file/wav" = "200 MiB"
