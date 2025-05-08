@@ -3,22 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{title}}</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>{{ title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>{{title}}</h1>
-    <form action="/register" method="post">
-        <input type="text" name="username" placeholder="username" required>
-        <input type="password" name="password" placeholder="password" required>
-        <button type="submit">Register</button>
-    </form>
-    Already have an account? <a href="/login">Login</a>
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
-    {% if success %}
-        <p style="color: green;">{{ success }}</p>
-    {% endif %}
+<body class="bg-gray-100 font-sans text-gray-800 flex items-center justify-center min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-md">
+        <!-- Nagłówek -->
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-6">{{ title }}</h1>
+
+        <!-- Komunikaty błędów i sukcesu -->
+        {% if error %}
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded" role="alert">
+                <p>{{ error }}</p>
+            </div>
+        {% endif %}
+        {% if success %}
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded" role="alert">
+                <p>{{ success }}</p>
+            </div>
+        {% endif %}
+
+        <!-- Formularz rejestracji -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <form action="/register" method="post" class="space-y-4">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                    <input
+                        type="text"
+                        name="username"
+                        id="username"
+                        placeholder="Enter your username"
+                        required
+                        class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input
+                        type="password"
+                        name="password"
+                        id="password"
+                        placeholder="Enter your password"
+                        required
+                        class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                </div>
+                <button
+                    type="submit"
+                    class="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+                >
+                    Register
+                </button>
+            </form>
+            <p class="mt-4 text-center text-gray-600">
+                Already have an account? <a href="/login" class="text-blue-600 hover:underline">Login</a>
+            </p>
+        </div>
+
+        <!-- Nawigacja powrotna -->
+        <div class="mt-6 text-center">
+            <a href="/" class="text-blue-600 hover:underline">Back to Home</a>
+        </div>
+    </div>
 </body>
 </html>

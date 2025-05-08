@@ -1,33 +1,49 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
 </head>
-<body>
-    <h1>{{ title }}</h1>
-    <p>Welcome, {{ user.username }}!</p>
-    <p>You have been created {{ user.created_at }}.</p>
-    <a href="/about">About Us</a>
-    <a href="/user">user 2</a>
-    <a href="/register">Register</a>
-    <a href="/login">Login</a>
-    <a href="/upload">Upload your track</a>
-    <a href="/logout">{{ logout }}</a>
-    <br>
-    
-    
-    <ul>
-        {% for track in tracks %}
-        <li>
-            <a href="/tracks/{{ track.id }}">{{ track.title }}</a>
-            <audio controls>
-                <source src="/{{ track.file_path }}" type="audio/mpeg">
-            </audio>
-        </li>
-        <br><br>
-        {% endfor %}
-    </ul>
-    
+<body class="bg-gray-100 font-sans text-gray-800">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-6">{{ title }}</h1>
+        <p class="text-lg text-center text-gray-600 mb-2">Welcome, {{ user.username }}!</p>
+        <p class="text-md text-center text-gray-500 mb-6">You have been created {{ user.created_at }}.</p>
+
+        <!-- Nawigacja -->
+        <nav class="flex flex-wrap justify-center gap-4 mb-8">
+            <a href="/about" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">About Us</a>
+            <a href="/user" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">User 2</a>
+            <a href="/register" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">Register</a>
+            <a href="/login" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">Login</a>
+            <a href="/upload" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">Upload your track</a>
+            {% if logout %}
+                <a href="/logout" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">{{ logout }}</a>
+            {% endif %}
+        </nav>
+
+        <!-- Lista utworów -->
+        <ul class="space-y-4">
+            <br>
+            {% for track in tracks %}
+                <p class="text-sm text-blue-600 mt-2 md:mt-0 text-right" >{{user.username}} </p>
+                <li class="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition duration-200 flex flex-col md:flex-row md:items-center md:justify-between">
+                    <a href="/tracks/{{ track.id }}" class="text-xl font-semibold text-gray-900 hover:text-blue-600">{{ track.title }}</a>
+                    <audio controls class="mt-2 md:mt-0 md:w-1/2">
+                        <source src="/{{ track.file_path }}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                    
+                </li>
+                <p class="text-sm text-gray-500 mt-2 md:mt-0 ">Uploaded on: {{track.created_at}}</p>
+                <span> </span>
+                
+            {% endfor %}
+        </ul>
+    </div>
 </body>
 </html>

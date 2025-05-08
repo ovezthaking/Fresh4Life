@@ -1,12 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>{{ title }}</h1>
-    <p>This is the about page.</p>
-    <a href="/">Home</a>
+<body class="bg-gray-100 font-sans text-gray-800">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Nagłówek -->
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-6">{{ title }}</h1>
+
+        <!-- Opis platformy -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <p class="text-lg text-gray-700 leading-relaxed mb-4">
+                Fresh4Life is a vibrant platform designed for emerging artists to share their music with a passionate community. We believe in empowering beginners by providing a space to showcase their creativity, connect with like-minded individuals, and grow as musicians. Our mission is to foster a supportive environment where new talent can thrive, inspire, and be discovered. Join Fresh4Life to unleash your sound and become part of a dynamic music movement!
+            </p>
+        </div>
+
+        <!-- Sekcja kontaktowa -->
+        <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Contact</h2>
+            <p class="text-md text-gray-600 mb-2">For inquiries, support, or collaboration, reach out to us at:</p>
+            <p class="text-lg text-blue-600 font-medium">
+                📧 <a href="mailto:kontaktovez@gmail.com" class="hover:underline">kontaktovez@gmail.com</a>
+            </p>
+        </div>
+
+        <!-- Nawigacja powrotna -->
+        <div class="mt-8 text-center">
+            <a href="/" class="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition duration-300">Back to Home</a>
+        </div>
+    </div>
 </body>
 </html>
