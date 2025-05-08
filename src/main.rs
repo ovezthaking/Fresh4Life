@@ -16,7 +16,6 @@ use rocket::form::Form;
 use rocket::http::Status;
 use rocket::http::CookieJar;
 use rocket::http::Cookie;
-use rocket::fs::TempFile;
 use rocket::config::Config;
 use rocket::data::{ByteUnit, Limits, ToByteUnit};
 use rocket_multipart_form_data::{
