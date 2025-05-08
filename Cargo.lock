@@ -14,6 +14,7 @@ dependencies = [
  "rocket",
  "rocket-multipart-form-data",
  "serde",
+ "serde_json",
  "tera",
 ]
 

@@ -3,23 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{title}}</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>{{ title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>{{ title }}</h1>
-    <ul>
-        {% for track in tracks %}
-        <li>
-            <a href="/tracks/{{ track.id }}">{{ track.title }}</a>
-            <audio controls>
-                <source src="/{{ track.file_path }}" type="audio/mpeg">
-            </audio>
+<body class="bg-gray-100 font-sans text-gray-800">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Nagłówek -->
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-6">{{ title }}</h1>
+
+        <!-- Lista utworów -->
+        <ul class="space-y-6">
+            {% for track in tracks %}
+                <li class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition duration-200">
+                    <!-- Informacje o użytkowniku -->
+                    <p class="text-sm text-blue-600 text-left mb-2">{{ track.username }}</p>
+                    <!-- Tytuł i odtwarzacz -->
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                        <a href="/tracks/{{ track.id }}" class="text-xl font-semibold text-gray-900 hover:text-blue-600">{{ track.title }}</a>
+                        <audio controls class="mt-2 md:mt-0 md:w-1/2">
+                            <source src="/{{ track.file_path }}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                    <!-- Data przesłania -->
+                    <p class="text-sm text-gray-500 mt-2">Uploaded on: {{ track.created_at }}</p>
+                </li>
             
-        </li>
-        {% endfor %}
-    </ul>
-    <a href="/upload">Upload your own track</a>
-    <a href="/">Home</a>
+                
+            {% endfor %}
+        </ul>
+
+        <!-- Nawigacja -->
+        <nav class="flex flex-wrap justify-center gap-4 mt-8">
+            <a href="/upload" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition duration-300">Upload your own track</a>
+            <a href="/" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition duration-300">Back to Home</a>
+        </nav>
+    </div>
 </body>
 </html>

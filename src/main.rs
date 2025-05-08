@@ -29,6 +29,7 @@ use log::error;
 use std::path::Path;
 
 use tera::{Tera, Context};
+use serde_json;
 //use serde::Serialize;
 
 use diesel::prelude::*;
@@ -52,37 +53,31 @@ type DbPool = diesel::r2d2::Pool<ConnectionManager<MysqlConnection>>;
 // Index route that renders a template
 #[get("/")]
 async fn index(pool: &State<DbPool>, tera: &State<Tera>, cookies: &CookieJar<'_>) -> RawHtml<String> {
-    use schema::users::dsl::*;
+    use schema::users::dsl as users_dsl;
+    use schema::tracks::dsl as tracks_dsl;
 
     let mut context = Context::new();
-
-    // Get a connection from the pool
     let mut conn = pool.get().expect("Failed to get DB connection");
 
-    // Retrieve the first user from the database
-    if cookies.get("user_id").is_some(){
-        let session_user_id = cookies.get("user_id").unwrap().value().parse::<i32>().unwrap_or(0);
+    // Pobierz dane użytkownika z ciasteczka
+    if let Some(cookie) = cookies.get("user_id") {
+        let session_user_id = cookie.value().parse::<i32>().unwrap_or(0);
 
-        let user_result = users
-            .filter(id.eq(session_user_id))
+        let user_result = users_dsl::users
+            .filter(users_dsl::id.eq(session_user_id))
             .first::<models::User>(&mut conn)
             .optional();
-        
+
         match user_result {
-            Ok(Some(user)) => {
-                context.insert("user", &user);
-            }
-            Ok(None) => {
-                context.insert("error", "No users found");
-            }
+            Ok(Some(user)) => context.insert("user", &user),
+            Ok(None) => context.insert("error", "No users found"),
             Err(e) => {
                 println!("Database error: {}", e);
                 context.insert("error", "Error fetching user");
             }
         }
-    }
-    else{
-        let testuser = models::User{
+    } else {
+        let testuser = models::User {
             id: 0,
             username: "You are not logged in".to_string(),
             password: "testpassword".to_string(),
@@ -92,59 +87,94 @@ async fn index(pool: &State<DbPool>, tera: &State<Tera>, cookies: &CookieJar<'_>
         context.insert("user", &testuser);
     }
 
-    //Debugging cookie output
-    /* 
-    if cookies.get("user_id").is_some(){
-        
-        println!("debug cookie id: {}", cookies.get("user_id").unwrap().value());
-    }
-    */
-    context.insert("title", "Welcome");
-    if cookies.get("user_id").is_some(){
-        context.insert("logout", "Logout");
-    }
-    else{
-        context.insert("logout", "");
-    }
-    
-    
-    let tracks_result = schema::tracks::table
-        .load::<models::Track>(&mut conn);
+    // Pobierz listę utworów wraz z danymi użytkowników
+    let tracks_with_users = tracks_dsl::tracks
+        .inner_join(users_dsl::users.on(users_dsl::id.eq(tracks_dsl::user_id)))
+        .select((
+            tracks_dsl::id,
+            tracks_dsl::title,
+            tracks_dsl::genre,
+            tracks_dsl::file_path,
+            tracks_dsl::created_at,
+            users_dsl::username,
+        ))
+        .load::<(i32, String, String, String, chrono::NaiveDateTime, String)>(&mut conn);
 
-    match tracks_result {
+    match tracks_with_users {
         Ok(tracks) => {
-            context.insert("tracks", &tracks);
+            let tracks_with_authors: Vec<_> = tracks
+                .into_iter()
+                .map(|(id, title, genre, file_path, created_at, username)| {
+                    serde_json::json!({
+                        "id": id,
+                        "title": title,
+                        "genre": genre,
+                        "file_path": file_path,
+                        "created_at": created_at,
+                        "username": username,
+                    })
+                })
+                .collect();
+            context.insert("tracks", &tracks_with_authors);
         }
         Err(e) => {
             error!("Błąd wczytywania utworów: {:?}", e);
             context.insert("error", "Error loading tracks");
         }
     }
-    
-    // Render the template
-    let rendered = tera.render("index.html", &context)
-        .unwrap_or_else(|e| {
-            println!("Template error: {}", e);
-            "Error rendering template".to_string()
-        });
+
+    context.insert("title", "Welcome to Fresh4Life!");
+
+    let rendered = tera.render("index.html", &context).unwrap_or_else(|e| {
+        println!("Template error: {}", e);
+        "Error rendering template".to_string()
+    });
 
     RawHtml(rendered)
 }
 
 
 #[get("/user/<id>")]
-fn user(tera: &State<Tera>, id: i32) -> Result<RawHtml<String>, Status> {
-    let mut context = Context::new();
-    context.insert("id", &id);
-    context.insert("title", "User Profile");
+async fn user(
+    id: i32,
+    tera: &State<Tera>,
+    pool: &State<DbPool>,
+) -> RawHtml<String> {
+
     
-    match tera.render("user.html", &context) {
-        Ok(rendered) => Ok(RawHtml(rendered)),
-        Err(e) => {
+    let mut conn = pool.get().expect("Failed to get DB connection");
+
+    let user: models::User = schema::users::table
+        .filter(schema::users::id.eq(id))
+        .first(&mut conn)
+        .unwrap_or_else(|_| panic!("User not found"));
+
+    let user_tracks: Vec<models::Track> = schema::tracks::table
+        .filter(schema::tracks::user_id.eq(id))
+        .load(&mut conn)
+        .unwrap_or_default();
+
+    let saved_tracks: Vec<models::Track> = schema::tracks::table
+        .inner_join(schema::saved_tracks::table)
+        .filter(schema::saved_tracks::user_id.eq(id))
+        .select(schema::tracks::all_columns)
+        .load(&mut conn)
+        .unwrap_or_default();
+
+    let mut context = Context::new();
+    context.insert("title", &format!("Profile: {}", user.username));
+    context.insert("user", &user);
+    context.insert("tracks", &user_tracks);
+    context.insert("saved_tracks", &saved_tracks);
+
+    let rendered = tera
+        .render("user.html", &context)
+        .unwrap_or_else(|e| {
             println!("Template error: {}", e);
-            Err(Status::InternalServerError)
-        }
-    }
+            "Error rendering template".to_string()
+        });
+
+    RawHtml(rendered)
 }
 
 // About route with a different template
@@ -415,6 +445,8 @@ fn upload_form(tera: &State<Tera>) -> RawHtml<String> {
 
 #[get("/tracks")]
 async fn tracks(tera: &State<Tera>, pool: &State<DbPool>) -> Result<RawHtml<String>, Status> {
+    use schema::users::dsl as users_dsl;
+    use schema::tracks::dsl as tracks_dsl;
     let mut conn = pool.get().map_err(|e| {
         error!("Błąd połączenia z bazą danych: {:?}", e);
         Status::InternalServerError
@@ -431,6 +463,41 @@ async fn tracks(tera: &State<Tera>, pool: &State<DbPool>) -> Result<RawHtml<Stri
     context.insert("title", "All Tracks");
     context.insert("tracks", &tracks_result);
 
+    let tracks_with_users = tracks_dsl::tracks
+        .inner_join(users_dsl::users.on(users_dsl::id.eq(tracks_dsl::user_id)))
+        .select((
+            tracks_dsl::id,
+            tracks_dsl::title,
+            tracks_dsl::genre,
+            tracks_dsl::file_path,
+            tracks_dsl::created_at,
+            users_dsl::username,
+        ))
+        .load::<(i32, String, String, String, chrono::NaiveDateTime, String)>(&mut conn);
+
+    match tracks_with_users {
+        Ok(tracks) => {
+            let tracks_with_authors: Vec<_> = tracks
+                .into_iter()
+                .map(|(id, title, genre, file_path, created_at, username)| {
+                    serde_json::json!({
+                        "id": id,
+                        "title": title,
+                        "genre": genre,
+                        "file_path": file_path,
+                        "created_at": created_at,
+                        "username": username,
+                    })
+                })
+                .collect();
+            context.insert("tracks", &tracks_with_authors);
+        }
+        Err(e) => {
+            error!("Błąd wczytywania utworów: {:?}", e);
+            context.insert("error", "Error loading tracks");
+        }
+    }
+
     let rendered: String = tera
         .render("tracks.html", &context)
         .map_err(|e| {
@@ -439,6 +506,60 @@ async fn tracks(tera: &State<Tera>, pool: &State<DbPool>) -> Result<RawHtml<Stri
         })?;
 
     Ok(RawHtml(rendered))
+}
+
+
+
+#[get("/tracks/<id>")]
+async fn track(
+    id: i32,
+    tera: &State<Tera>,
+    pool: &State<DbPool>,
+    cookies: &CookieJar<'_>,
+) -> RawHtml<String> {
+    let mut conn = pool.get().expect("Failed to get DB connection");
+
+    let track: models::Track = crate::schema::tracks::table
+        .filter(crate::schema::tracks::id.eq(id))
+        .first(&mut conn)
+        .unwrap_or_else(|_| panic!("Track not found"));
+
+    let comments: Vec<models::Comment> = crate::schema::comments::table
+        .filter(crate::schema::comments::track_id.eq(id))
+        .load(&mut conn)
+        .unwrap_or_default();
+
+    let user_id: Option<i32> = cookies.get("user_id")
+        .and_then(|c| c.value().parse().ok());
+
+    let is_liked = if let Some(uid) = user_id {
+        if let Ok(mut conn) = pool.get() {
+            crate::schema::likes::table
+                .filter(crate::schema::likes::user_id.eq(uid))
+                .filter(crate::schema::likes::track_id.eq(id))
+                .first::<models::Like>(&mut conn)
+                .is_ok()
+        } else {
+            false
+        }
+    } else {
+        false
+    };
+
+    let mut context = Context::new();
+    context.insert("title", &track.title);
+    context.insert("track", &track);
+    context.insert("comments", &comments);
+    context.insert("is_liked", &is_liked);
+    context.insert("user_id", &user_id);
+
+    let rendered = tera.render("track.html", &context)
+        .unwrap_or_else(|e| {
+            println!("Template error: {}", e);
+            "Error rendering template".to_string()
+        });
+
+    RawHtml(rendered)
 }
 
 // Main function to set up the Rocket instance
@@ -483,7 +604,8 @@ fn rocket() -> Rocket<Build> {
             logout,
             upload,
             upload_form,
-            tracks
+            tracks,
+            track
         ])
         .mount("/static", FileServer::from("static"))
 }
