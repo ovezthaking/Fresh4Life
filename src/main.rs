@@ -562,6 +562,41 @@ async fn track(
     RawHtml(rendered)
 }
 
+
+#[derive(FromForm)]
+struct CommentForm {
+    track_id: i32,
+    content: String,
+}
+
+#[post("/comment", data = "<form>")]
+async fn comment(
+    form: Form<CommentForm>,
+    pool: &State<DbPool>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Status> {
+    let user_id: i32 = cookies.get("user_id")
+        .ok_or(Status::Unauthorized)?
+        .value()
+        .parse()
+        .map_err(|_| Status::Unauthorized)?;
+
+    let new_comment = models::NewComment {
+        user_id,
+        track_id: form.track_id,
+        content: form.content.clone(),
+    };
+
+    let mut conn = pool.get().map_err(|_| Status::InternalServerError)?;
+    diesel::insert_into(crate::schema::comments::table)
+        .values(&new_comment)
+        .execute(&mut conn)
+        .map_err(|_| Status::InternalServerError)?;
+
+    Ok(Redirect::to(format!("/tracks/{}", form.track_id)))
+}
+
+
 // Main function to set up the Rocket instance
 // and configure the routes
 
@@ -605,7 +640,8 @@ fn rocket() -> Rocket<Build> {
             upload,
             upload_form,
             tracks,
-            track
+            track,
+            comment
         ])
         .mount("/static", FileServer::from("static"))
 }
