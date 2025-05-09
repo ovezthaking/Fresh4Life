@@ -665,7 +665,7 @@ async fn like(
         .execute(&mut conn)
         .map_err(|_| Status::BadRequest)?;
 
-    Ok(Redirect::to(format!("/track/{}", form.track_id)))
+    Ok(Redirect::to(format!("/tracks/{}", form.track_id)))
 }
 
 #[post("/unlike", data = "<form>")]
@@ -690,7 +690,7 @@ async fn unlike(
     .execute(&mut conn)
     .map_err(|_| Status::InternalServerError)?;
 
-    Ok(Redirect::to(format!("/track/{}", form.track_id)))
+    Ok(Redirect::to(format!("/tracks/{}", form.track_id)))
 }
 
 
