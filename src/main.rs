@@ -175,6 +175,7 @@ async fn user(
         .inner_join(schema::saved_tracks::table)
         .filter(schema::saved_tracks::user_id.eq(id))
         .select(schema::tracks::all_columns)
+        .order_by(schema::tracks::created_at.desc())
         .load(&mut conn)
         .unwrap_or_default();
 
@@ -491,6 +492,7 @@ async fn tracks(tera: &State<Tera>, pool: &State<DbPool>) -> Result<RawHtml<Stri
             tracks_dsl::user_id,
             users_dsl::username,
         ))
+        .order_by(tracks_dsl::created_at.desc())
         .load::<(i32, String, String, String, chrono::NaiveDateTime, i32, String)>(&mut conn);
 
     match tracks_with_users {
@@ -694,6 +696,39 @@ async fn unlike(
 }
 
 
+#[derive(FromForm)]
+struct SaveForm {
+    track_id: i32,
+}
+
+#[post("/save", data = "<form>")]
+async fn save(
+    form: Form<SaveForm>,
+    pool: &State<DbPool>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Status> {
+    let user_id: i32 = cookies.get("user_id")
+        .ok_or(Status::Unauthorized)?
+        .value()
+        .parse()
+        .map_err(|_| Status::Unauthorized)?;
+
+    let new_saved = models::NewSavedTrack {
+        user_id,
+        track_id: form.track_id,
+    };
+
+    let mut conn = pool.get().expect("Falied to connect to DB");
+
+    diesel::insert_into(crate::schema::saved_tracks::table)
+        .values(&new_saved)
+        .execute(&mut conn)
+        .map_err(|_| Status::BadRequest)?;
+    
+
+    Ok(Redirect::to(format!("/tracks/{}", form.track_id)))
+}
+
 
 // Main function to set up the Rocket instance
 // and configure the routes
@@ -741,7 +776,8 @@ fn rocket() -> Rocket<Build> {
             track,
             comment,
             like,
-            unlike
+            unlike,
+            save
         ])
         .mount("/static", FileServer::from("static"))
 }

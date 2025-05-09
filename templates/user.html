@@ -1,33 +1,65 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>{{ title }}</h1>
-    <h2>Uploaded Tracks</h2>
-    <ul>
-        {% for track in tracks %}
-        <li>
-            <a href="/track/{{ track.id }}">{{ track.title }}</a>
-            <audio controls>
-                <source src="/{{ track.file_path }}" type="audio/mpeg">
-            </audio>
-        </li>
-        {% endfor %}
-    </ul>
-    <h2>Saved Tracks</h2>
-    <ul>
-        {% for track in saved_tracks %}
-        <li>
-            <a href="/track/{{ track.id }}">{{ track.title }}</a>
-            <audio controls>
-                <source src="/{{ track.file_path }}" type="audio/mpeg">
-            </audio>
-        </li>
-        {% endfor %}
-    </ul>
-    <a href="/tracks">All Tracks</a> | <a href="/">Home</a>
+<body class="bg-gray-100 font-sans text-gray-800">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Nagłówek -->
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-6">{{ title }}</h1>
+
+        <!-- Sekcja przesłanych utworów -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Uploaded Tracks</h2>
+            {% if tracks %}
+                <ul class="space-y-6">
+                    {% for track in tracks %}
+                        <li class="border-b border-gray-200 pb-4 last:border-b-0">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                                <a href="/track/{{ track.id }}" class="text-xl font-semibold text-gray-900 hover:text-blue-600">{{ track.title }}</a>
+                                <audio controls class="mt-2 md:mt-0 md:w-1/2">
+                                    <source src="/{{ track.file_path }}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-gray-600">No uploaded tracks yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Sekcja zapisanych utworów -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Saved Tracks</h2>
+            {% if saved_tracks %}
+                <ul class="space-y-6">
+                    {% for track in saved_tracks %}
+                        <li class="border-b border-gray-200 pb-4 last:border-b-0">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                                <a href="/track/{{ track.id }}" class="text-xl font-semibold text-gray-900 hover:text-blue-600">{{ track.title }}</a>
+                                <audio controls class="mt-2 md:mt-0 md:w-1/2">
+                                    <source src="/{{ track.file_path }}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-gray-600">No saved tracks yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Nawigacja -->
+        <nav class="flex flex-wrap justify-center gap-4 mt-8">
+            <a href="/tracks" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition duration-300">All Tracks</a>
+            <a href="/" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition duration-300">Back to Home</a>
+        </nav>
+    </div>
 </body>
 </html>
