@@ -25,7 +25,7 @@ use rocket_multipart_form_data::{
 //use rocket_multipart_form_data::{MultipartFormData, MultipartFormDataField};
 
 use log::error;
-use schema::tracks::dsl;
+
 
 use std::path::Path;
 
@@ -636,6 +636,65 @@ async fn comment(
 }
 
 
+#[derive(FromForm)]
+struct LikeForm {
+    track_id: i32,
+}
+
+#[post("/like", data = "<form>")]
+async fn like(
+    form: Form<LikeForm>,
+    pool: &State<DbPool>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Status> {
+    let user_id: i32 = cookies.get("user_id")
+        .ok_or(Status::Unauthorized)?
+        .value()
+        .parse()
+        .map_err(|_| Status::Unauthorized)?;
+
+    let new_like = models::NewLike {
+        user_id,
+        track_id: form.track_id,
+    };
+
+    let mut conn = pool.get().map_err(|_| Status::InternalServerError)?;
+
+    diesel::insert_into(crate::schema::likes::table)
+        .values(&new_like)
+        .execute(&mut conn)
+        .map_err(|_| Status::BadRequest)?;
+
+    Ok(Redirect::to(format!("/track/{}", form.track_id)))
+}
+
+#[post("/unlike", data = "<form>")]
+async fn unlike(
+    form: Form<LikeForm>,
+    pool: &State<DbPool>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Status> {
+    let user_id: i32 = cookies.get("user_id")
+        .ok_or(Status::Unauthorized)?
+        .value()
+        .parse()
+        .map_err(|_| Status::Unauthorized)?;
+
+    let mut conn = pool.get().map_err(|_| Status::InternalServerError)?;
+
+    diesel::delete(
+        crate::schema::likes::table
+            .filter(crate::schema::likes::user_id.eq(user_id))
+            .filter(crate::schema::likes::track_id.eq(form.track_id))
+    )
+    .execute(&mut conn)
+    .map_err(|_| Status::InternalServerError)?;
+
+    Ok(Redirect::to(format!("/track/{}", form.track_id)))
+}
+
+
+
 // Main function to set up the Rocket instance
 // and configure the routes
 
@@ -680,7 +739,9 @@ fn rocket() -> Rocket<Build> {
             upload_form,
             tracks,
             track,
-            comment
+            comment,
+            like,
+            unlike
         ])
         .mount("/static", FileServer::from("static"))
 }
