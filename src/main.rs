@@ -25,6 +25,7 @@ use rocket_multipart_form_data::{
 //use rocket_multipart_form_data::{MultipartFormData, MultipartFormDataField};
 
 use log::error;
+use schema::tracks::dsl;
 
 use std::path::Path;
 
@@ -59,10 +60,12 @@ async fn index(pool: &State<DbPool>, tera: &State<Tera>, cookies: &CookieJar<'_>
     let mut context = Context::new();
     let mut conn = pool.get().expect("Failed to get DB connection");
 
+    
+    
     // Pobierz dane użytkownika z ciasteczka
     if let Some(cookie) = cookies.get("user_id") {
         let session_user_id = cookie.value().parse::<i32>().unwrap_or(0);
-
+        context.insert("user_id", &session_user_id);
         let user_result = users_dsl::users
             .filter(users_dsl::id.eq(session_user_id))
             .first::<models::User>(&mut conn)
@@ -96,21 +99,24 @@ async fn index(pool: &State<DbPool>, tera: &State<Tera>, cookies: &CookieJar<'_>
             tracks_dsl::genre,
             tracks_dsl::file_path,
             tracks_dsl::created_at,
+            tracks_dsl::user_id,
             users_dsl::username,
         ))
-        .load::<(i32, String, String, String, chrono::NaiveDateTime, String)>(&mut conn);
+        .order_by(tracks_dsl::created_at.desc())
+        .load::<(i32, String, String, String, chrono::NaiveDateTime, i32, String)>(&mut conn);
 
     match tracks_with_users {
         Ok(tracks) => {
             let tracks_with_authors: Vec<_> = tracks
                 .into_iter()
-                .map(|(id, title, genre, file_path, created_at, username)| {
+                .map(|(id, title, genre, file_path, created_at, track_user_id, username)| {
                     serde_json::json!({
                         "id": id,
                         "title": title,
                         "genre": genre,
                         "file_path": file_path,
                         "created_at": created_at,
+                        "track_user_id": track_user_id,
                         "username": username,
                     })
                 })
@@ -124,6 +130,17 @@ async fn index(pool: &State<DbPool>, tera: &State<Tera>, cookies: &CookieJar<'_>
     }
 
     context.insert("title", "Welcome to Fresh4Life!");
+    if cookies.get("user_id").is_some() {
+        context.insert("logout", "Log Out");
+        context.insert("upload", "Upload your track");
+    }
+    
+    context.insert("login", "Log in");
+    context.insert("register", "Sign Up");
+    
+    
+    
+
 
     let rendered = tera.render("index.html", &context).unwrap_or_else(|e| {
         println!("Template error: {}", e);
@@ -166,7 +183,7 @@ async fn user(
     context.insert("user", &user);
     context.insert("tracks", &user_tracks);
     context.insert("saved_tracks", &saved_tracks);
-
+    context.insert("logout", "Log Out");
     let rendered = tera
         .render("user.html", &context)
         .unwrap_or_else(|e| {
@@ -471,21 +488,23 @@ async fn tracks(tera: &State<Tera>, pool: &State<DbPool>) -> Result<RawHtml<Stri
             tracks_dsl::genre,
             tracks_dsl::file_path,
             tracks_dsl::created_at,
+            tracks_dsl::user_id,
             users_dsl::username,
         ))
-        .load::<(i32, String, String, String, chrono::NaiveDateTime, String)>(&mut conn);
+        .load::<(i32, String, String, String, chrono::NaiveDateTime, i32, String)>(&mut conn);
 
     match tracks_with_users {
         Ok(tracks) => {
             let tracks_with_authors: Vec<_> = tracks
                 .into_iter()
-                .map(|(id, title, genre, file_path, created_at, username)| {
+                .map(|(id, title, genre, file_path, created_at,track_user_id, username)| {
                     serde_json::json!({
                         "id": id,
                         "title": title,
                         "genre": genre,
                         "file_path": file_path,
                         "created_at": created_at,
+                        "track_user_id": track_user_id,
                         "username": username,
                     })
                 })
@@ -519,15 +538,32 @@ async fn track(
 ) -> RawHtml<String> {
     let mut conn = pool.get().expect("Failed to get DB connection");
 
-    let track: models::Track = crate::schema::tracks::table
+    let track_with_user: (models::Track, String, i32) = crate::schema::tracks::table
+        .inner_join(crate::schema::users::table.on(crate::schema::users::id.eq(crate::schema::tracks::user_id)))
         .filter(crate::schema::tracks::id.eq(id))
+        .select((crate::schema::tracks::all_columns, crate::schema::users::username, crate::schema::users::id))
         .first(&mut conn)
         .unwrap_or_else(|_| panic!("Track not found"));
 
-    let comments: Vec<models::Comment> = crate::schema::comments::table
+    let (track, username, user_track_id) = track_with_user;
+    
+
+    
+    #[derive(serde::Serialize)]
+    struct CommentWithUsername {
+        content: String,
+        username: String,
+    }
+    
+    let comments: Vec<CommentWithUsername> = crate::schema::comments::table
+        .inner_join(crate::schema::users::table)
         .filter(crate::schema::comments::track_id.eq(id))
-        .load(&mut conn)
-        .unwrap_or_default();
+        .select((crate::schema::comments::content, crate::schema::users::username))
+        .load::<(String, String)>(&mut conn)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(content, username)| CommentWithUsername { content, username })
+        .collect();
 
     let user_id: Option<i32> = cookies.get("user_id")
         .and_then(|c| c.value().parse().ok());
@@ -552,6 +588,9 @@ async fn track(
     context.insert("comments", &comments);
     context.insert("is_liked", &is_liked);
     context.insert("user_id", &user_id);
+    context.insert("author", &username);
+    context.insert("id", &user_track_id);
+
 
     let rendered = tera.render("track.html", &context)
         .unwrap_or_else(|e| {

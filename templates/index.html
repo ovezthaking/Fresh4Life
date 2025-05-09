@@ -18,19 +18,21 @@
         <nav class="flex flex-wrap justify-center gap-4 mb-8">
             <a href="/about" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">About Us</a>
             <a href="/tracks" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">Track List</a>
-            <a href="/register" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">Register</a>
-            <a href="/login" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">Login</a>
-            <a href="/upload" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">Upload your track</a>
-            {% if logout %}
-                <a href="/logout" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300">{{ logout }}</a>
+            {% if user_id is defined and user_id %}
+                <a href="/upload" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300"> Upload Your Track </a>
+                <a href="/logout" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300"> Log Out </a>
+            {% else %}
+                <a href="/register" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300"> Sign Up </a>
+                <a href="/login" class="px-4 py-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition duration-300"> Login </a>
             {% endif %}
+            
         </nav>
 
         <!-- Lista utworów -->
         <ul class="space-y-4">
             <br>
             {% for track in tracks %}
-                <p class="text-sm text-blue-600 mt-2 md:mt-0 text-right" style="margin-right: 2%; margin-top: 1%;">{{track.username}} </p>
+                <p class="text-sm text-blue-600 mt-2 md:mt-0 text-right" style="margin-right: 2%; margin-top: 1%;"> <a href="/user/{{track.track_user_id}}">{{track.username}}</a> </p>
                 <li class="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition duration-200 flex flex-col md:flex-row md:items-center md:justify-between">
                     <a href="/tracks/{{ track.id }}" class="text-xl font-semibold text-gray-900 hover:text-blue-600">{{ track.title }}</a>
                     <audio controls class="mt-2 md:mt-0 md:w-1/2">
