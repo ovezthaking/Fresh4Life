@@ -116,7 +116,7 @@ The app includes the following features:
 | GET    | `/tracks`         | Displays a list of all uploaded tracks |
 
 ## Database Schema
-The application uses a single `users` table with the following schema:
+The application uses for example `users` table with the following schema:
 ```sql
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
