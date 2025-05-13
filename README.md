@@ -66,7 +66,7 @@ The app includes the following features:
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/ovezthaking/Fresh4Life.git
-   cd your-repo
+   cd Fresh4Life
    ```
 
 2. **Set Up the Database**:
