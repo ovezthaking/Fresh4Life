@@ -4,6 +4,8 @@ Web service about Music
 
 # Rust Web App with Rocket, Diesel, and Tera
 
+University project — not production-ready!
+
 ## Overview
 This project is a full-stack web application built using the **Rust** programming language with the **Rocket** web framework. It provides user authentication (registration, login, and logout), session management with cookies, and dynamic template rendering using **Tera**. The application interacts with a **MySQL** database through **Diesel**, an ORM and query builder, and uses **bcrypt** for secure password hashing. Static files are served from a dedicated directory, and the application follows a modular structure for maintainability.
 
